@@ -26,7 +26,11 @@ class XiImage::Image
   def initialize(path)
     fail IOError, "Path '#{path}' does not exist or is not a file" unless File::file?(path)
     XiImage::Image.load
-    @image = Magick::ImageList.new(path)
+    @image = Magick::ImageList.new(path).first
+  end
+
+  def size
+    [@image.columns, @image.rows]
   end
 
   def color_histogram(colormap: nil)

@@ -11,7 +11,9 @@ end
 
 XiImage::Config.load_yaml('conf/xi_image.yml')
 
-XiImage::Image.new(ARGV[0])
-              .color_histogram
-              .sort_by {|k,v| -v}
-              .each {|k,v| puts "#{k.join('|')}: #{v}"}
+img = XiImage::Image.new(ARGV[0])
+puts "Size: #{img.size}"
+puts "Colors:"
+img.color_histogram
+   .sort_by {|k,v| -v}
+   .each {|k,v| puts "  - #{k.join('|')}: #{v}"}
