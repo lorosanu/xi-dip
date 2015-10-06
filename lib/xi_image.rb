@@ -36,3 +36,5 @@ module XiImage
 
   end
 end
+
+require 'xi_image/image'
