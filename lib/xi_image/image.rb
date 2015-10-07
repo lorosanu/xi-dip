@@ -1,4 +1,6 @@
 require 'rmagick'
+require 'exifr'
+
 DEFAULT_COLORS =  {'#FFFFFF' => ['white'],
                    '#000000' => ['black']}
 
@@ -26,7 +28,22 @@ class XiImage::Image
   def initialize(path)
     fail IOError, "Path '#{path}' does not exist or is not a file" unless File::file?(path)
     XiImage::Image.load
+    @path = path
     @image = Magick::ImageList.new(path).first
+  end
+
+  def format
+    @image.format
+  end
+
+  def exif
+    exif = nil
+    if format == 'JPEG'
+      exif = EXIFR::JPEG.new(@path).exif
+    elsif format == 'TIFF'
+      exif = EXIFR::TIFF.new(@path).exif
+    end
+    (exif.nil?) ? {} : exif.to_hash
   end
 
   def size
