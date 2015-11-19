@@ -11,7 +11,7 @@ end
 
 XiImage::Config.load_yaml('conf/xi_image.yml')
 
-img = XiImage::Image.new(ARGV[0])
+img = XiImage::Image.new(File.open(ARGV[0]).read)
 puts "Size: #{img.size}"
 puts "Format: #{img.format}"
 puts "Colors:"

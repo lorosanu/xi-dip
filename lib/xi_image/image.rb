@@ -25,11 +25,10 @@ class XiImage::Image
     @@loaded = true
   end
 
-  def initialize(path)
-    fail IOError, "Path '#{path}' does not exist or is not a file" unless File::file?(path)
+  def initialize(blob)
+    @blob = blob
+    @image = Magick::Image.from_blob(blob).first
     XiImage::Image.load
-    @path = path
-    @image = Magick::ImageList.new(path).first
   end
 
   def format
@@ -39,9 +38,9 @@ class XiImage::Image
   def exif
     exif = nil
     if format == 'JPEG'
-      exif = EXIFR::JPEG.new(@path).exif
+      exif = EXIFR::JPEG.new(StringIO.new @blob).exif
     elsif format == 'TIFF'
-      exif = EXIFR::TIFF.new(@path).exif
+      exif = EXIFR::TIFF.new(StringIO.new @blob).exif
     end
     (exif.nil?) ? {} : exif.to_hash
   end
