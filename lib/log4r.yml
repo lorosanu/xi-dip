@@ -1,0 +1,12 @@
+log4r_config:
+  loggers:
+  - name: "xi_image"
+    level: WARN
+    outputters:
+    - stdout
+  outputters:
+  - name: stdout
+    type: StdoutOutputter
+    formatter:
+      type : PatternFormatter
+      pattern : '%d [%l] %C: %M'
