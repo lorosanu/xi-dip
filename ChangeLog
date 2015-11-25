@@ -1,0 +1,13 @@
+# @markup markdown
+
+# XiImage 0.1.1
+* Fix exif encoding issue
+
+# XiImage 0.1.0
+* Image class
+- exif method
+- size method
+- color_histogram method
+* Add config module
+* Use log4r
+
