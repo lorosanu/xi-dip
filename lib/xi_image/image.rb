@@ -42,7 +42,14 @@ class XiImage::Image
     elsif format == 'TIFF'
       exif = EXIFR::TIFF.new(StringIO.new @blob).exif
     end
-    (exif.nil?) ? {} : exif.to_hash
+    exif = (exif.nil?) ? {} : exif.to_hash
+    exif.each do |k, v|
+      begin
+        v.encode!('utf-8', 'utf-8',  :invalid => :replace) if v.class == String
+      rescue
+        exif.delete(k)
+      end
+    end
   end
 
   def size
