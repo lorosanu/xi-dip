@@ -1,3 +1,4 @@
+# encoding: utf-8
 require 'log4r'
 require 'log4r/yamlconfigurator'
 
