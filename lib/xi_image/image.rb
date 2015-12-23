@@ -61,7 +61,12 @@ class XiImage::Image
     img = @image
     img = img.transparent('white', 65535)
     img = img.remap(colormap.image)
-    Hash[img.color_histogram.map {|k,v|
-      [colormap.colors[k.to_color(Magick::AllCompliance, true, 8, true)], v]}]
+    histo = {}
+    img.color_histogram.each do |color, number|
+      color = color.to_color(Magick::AllCompliance, true, 8, true)
+      color_name = colormap.colors[color]
+      histo[color_name] = number
+    end
+    histo
   end
 end
