@@ -60,7 +60,7 @@ class XiImage::Image
   def color_histogram(colormap: nil)
     colormap = @@colormap if colormap.nil?
     img = @image
-    img = img.transparent('white', 65535)
+    img = img.transparent('white', 65_535)
     img = img.remap(colormap.image)
     histo = {}
     img.color_histogram.each do |color, number|
