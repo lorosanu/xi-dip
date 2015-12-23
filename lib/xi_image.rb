@@ -17,7 +17,7 @@ module XiImage
     def self.get(namespace, default = nil)
       config = @config
       namespace.split('/').each do |ns|
-        return default unless config.kind_of?(Hash) && config.key?(ns)
+        return default unless config.is_a?(Hash) && config.key?(ns)
         config = config[ns]
       end
       config
