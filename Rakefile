@@ -20,11 +20,11 @@ MODULE_PATH="xi_image".freeze
 GEM_REPOSITORY="https://gem.xilopix.net:443".freeze
 GEMINABOX_REPOSITORY=true
 
-LIB_DIR=File.expand_path('lib',File.dirname(__FILE__))
-BIN_DIR=File.expand_path('bin',File.dirname(__FILE__))
-PKG_DIR=File.expand_path('pkg',File.dirname(__FILE__))
-CONF_DIR=File.expand_path('conf',File.dirname(__FILE__))
-DOC_DIR=File.expand_path('doc',File.dirname(__FILE__))
+LIB_DIR=File.expand_path('lib', File.dirname(__FILE__))
+BIN_DIR=File.expand_path('bin', File.dirname(__FILE__))
+PKG_DIR=File.expand_path('pkg', File.dirname(__FILE__))
+CONF_DIR=File.expand_path('conf', File.dirname(__FILE__))
+DOC_DIR=File.expand_path('doc', File.dirname(__FILE__))
 
 desc "Create an archive of the project's files"
 task :archive => ["archive:clean"] do
@@ -33,7 +33,7 @@ task :archive => ["archive:clean"] do
   archive_src(false)
 
   Dir.mktmpdir("#{MODULE}-archive") do |dir|
-    FileUtils.mkdir_p(File.join(dir,name))
+    FileUtils.mkdir_p(File.join(dir, name))
     sh "tar rhvf #{name}.tar -C #{dir} #{name}"
   end
   sh "xz -f #{name}.tar"
@@ -52,15 +52,15 @@ namespace :archive do
 end
 
 desc "Build and publish all packages"
-task :pkg => ["pkg:clean","pkg:build","pkg:publish"]
+task :pkg => ["pkg:clean", "pkg:build", "pkg:publish"]
 namespace :pkg do
   desc "Build package of a specified component (all if none specified)"
-  task :build do |t,args|
+  task :build do |t, args|
     gem_build(MODULE)
   end
 
   desc "Publish package of a specified component (all if none specified)"
-  task :publish => [:build] do |t,args|
+  task :publish => [:build] do |t, args|
     geminabox_delete(MODULE) if GEMINABOX_REPOSITORY \
       and geminabox_exist?(MODULE)
     gem_push(MODULE)
@@ -68,7 +68,7 @@ namespace :pkg do
 
   if GEMINABOX_REPOSITORY
     desc "Unpublish package of a specified component (all if none specified)"
-    task :unpublish do |t,args|
+    task :unpublish do |t, args|
       geminabox_delete(MODULE) if geminabox_exist?(MODULE)
     end
   end
@@ -80,32 +80,32 @@ namespace :pkg do
 end
 
 desc "Check the syntax of every files"
-task :syntax => ["syntax:src","syntax:bin","syntax:gems","syntax:conf"]
+task :syntax => ["syntax:src", "syntax:bin", "syntax:gems", "syntax:conf"]
 namespace :syntax do
   desc "Check the syntax of source files"
   task :src do
-    Dir[File.join(LIB_DIR,'**','*.rb')].each do |f|
+    Dir[File.join(LIB_DIR, '**', '*.rb')].each do |f|
       sh "ruby -cw #{f}"
     end
   end
 
   desc "Check the syntax of script files"
   task :bin do
-    Dir[File.join(BIN_DIR,'*')].each do |f|
+    Dir[File.join(BIN_DIR, '*')].each do |f|
       sh "ruby -cw #{f}"
     end
   end
 
   desc "Check the syntax of gem files"
   task :gems do
-    Dir[File.join('**','*.gemspec')].each do |f|
+    Dir[File.join('**', '*.gemspec')].each do |f|
       sh "ruby -cw #{f}"
     end
   end
 
   desc "Check the syntax of config files"
   task :conf do
-    Dir[File.join(CONF_DIR,'**','*.conf')].each do |f|
+    Dir[File.join(CONF_DIR, '**', '*.conf')].each do |f|
       sh "ruby -ryaml -e 'YAML.load(STDIN)' < #{f}"
     end
   end
@@ -138,7 +138,7 @@ namespace :version do
   end
 
   desc "Set/Unset a tag on current version (development)"
-  task :tag, [:name] do |t,args|
+  task :tag, [:name] do |t, args|
     if args.name and !args.name.empty?
       version = version_read()
       version[3] = args.name.strip
@@ -163,8 +163,8 @@ def gem_name(comp)
   comp
 end
 
-def gem_pkg_file(comp,dir=nil)
-  File.join(dir||PKG_DIR,"#{gem_name(comp)}-#{version}.gem")
+def gem_pkg_file(comp, dir=nil)
+  File.join(dir||PKG_DIR, "#{gem_name(comp)}-#{version}.gem")
 end
 
 def gem_spec_file(comp)
@@ -176,7 +176,7 @@ def gem_build(comp)
   cmd.handle_options([gem_spec_file(comp)])
   cmd.execute
   FileUtils.mkdir_p(PKG_DIR) unless File.exist?(PKG_DIR)
-  FileUtils.mv(gem_pkg_file(comp,Dir.pwd),gem_pkg_file(comp))
+  FileUtils.mv(gem_pkg_file(comp, Dir.pwd), gem_pkg_file(comp))
 end
 
 def gem_push(comp)
@@ -207,12 +207,12 @@ def gem_push(comp)
 end
 
 def geminabox_http_path(comp)
-  File.join('/','gems',File.basename(gem_pkg_file(comp)))
+  File.join('/', 'gems', File.basename(gem_pkg_file(comp)))
 end
 
 def geminabox_exist?(comp)
   uri = URI(GEM_REPOSITORY)
-  http = Net::HTTP.new(uri.hostname,uri.port)
+  http = Net::HTTP.new(uri.hostname, uri.port)
   http.use_ssl = true if uri.scheme == 'https'
   http.start
   resp = http.head(geminabox_http_path(comp))
@@ -225,19 +225,19 @@ end
 
 def geminabox_delete(comp)
   uri = URI(GEM_REPOSITORY)
-  http = Net::HTTP.new(uri.hostname,uri.port)
+  http = Net::HTTP.new(uri.hostname, uri.port)
   http.use_ssl = true if uri.scheme == 'https'
   http.start
   resp = http.delete(geminabox_http_path(comp))
   fail <<-EOS if !resp.is_a?(Net::HTTPSuccess) and !resp.is_a?(Net::HTTPRedirection) and !resp.is_a?(Net::HTTPBadGateway) # BadGateway -> geminabox "bug"
-    HTTP/DELETE failed on #{File.join(uri.to_s,geminabox_http_path(comp))}
+    HTTP/DELETE failed on #{File.join(uri.to_s, geminabox_http_path(comp))}
     ##{resp.code}: #{resp.message} #{resp.to_hash}
   EOS
   puts "Removed #{File.basename(geminabox_http_path(comp))}"
 end
 
 def version_file
-  File.join(File.dirname(__FILE__),'lib',MODULE_PATH,'version.rb')
+  File.join(File.dirname(__FILE__), 'lib', MODULE_PATH, 'version.rb')
 end
 
 def version
@@ -256,30 +256,30 @@ def version_read
 end
 
 def version_write(version)
-  File.open(version_file,'r') do |file|
+  File.open(version_file, 'r') do |file|
     content = file.read
-    file.reopen(version_file,'w')
-    file.write(content.gsub(/\d+\.\d+\.\d+(?:\.([\w\.-]+))?/,version.join('.')))
+    file.reopen(version_file, 'w')
+    file.write(content.gsub(/\d+\.\d+\.\d+(?:\.([\w\.-]+))?/, version.join('.')))
   end
 end
 
-def tar(*files,writer:nil)
+def tar(*files, writer:nil)
   tw = writer || Gem::Package::TarWriter.new(StringIO.new)
 
   files.each do |file|
     if file.is_a?(String)
-      path = file.gsub(/^#{File.expand_path(File.dirname(__FILE__))}\/?/,'')
+      path = file.gsub(/^#{File.expand_path(File.dirname(__FILE__))}\/?/, '')
     elsif file.is_a?(Hash)
       file, path = file.first
     end
     mode = File.stat(file).mode
 
     if File.directory?(file)
-      tw.mkdir(path,mode)
-      tar(*Dir[File.join(file,'*')],writer: tw)
+      tw.mkdir(path, mode)
+      tar(*Dir[File.join(file, '*')], writer: tw)
     else
-      tw.add_file(path,mode) do |tf|
-        File.open(file,'rb') { |f| tf.write f.read }
+      tw.add_file(path, mode) do |tf|
+        File.open(file, 'rb') { |f| tf.write f.read }
       end
     end
   end
