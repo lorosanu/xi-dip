@@ -2,7 +2,7 @@
 require 'rmagick'
 require 'exifr'
 
-DEFAULT_COLORS =  {'#FFFFFF' => ['white'],
+DEFAULT_COLORS = {'#FFFFFF' => ['white'],
                    '#000000' => ['black']}
 
 class XiImage::ColorMap
@@ -46,7 +46,7 @@ class XiImage::Image
     exif = (exif.nil?) ? {} : exif.to_hash
     exif.each do |k, v|
       begin
-        v.encode!('utf-8', 'utf-8',  :invalid => :replace) if v.class == String
+        v.encode!('utf-8', 'utf-8', :invalid => :replace) if v.class == String
       rescue
         exif.delete(k)
       end
