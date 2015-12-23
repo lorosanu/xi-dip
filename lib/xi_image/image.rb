@@ -11,7 +11,7 @@ class XiImage::ColorMap
   def initialize(colors)
     @colors = colors
     @image = Magick::Image.new(1, @colors.length)
-    @colors.each_with_index {|c, i| @image.pixel_color(0, i, c[0])}
+    @colors.each_with_index {|c, i| @image.pixel_color(0, i, c[0]) }
   end
 end
 

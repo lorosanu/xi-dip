@@ -247,7 +247,7 @@ end
 def version_read
   content = File.read(version_file)
   if content =~ /(\d+)\.(\d+)\.(\d+)(?:\.([\w\.-]+))?/
-    ret = Regexp.last_match.to_a[1..3].map{|v| v.to_i}
+    ret = Regexp.last_match.to_a[1..3].map{|v| v.to_i }
     ret[3] = Regexp.last_match(4) if Regexp.last_match(4)
     ret
   else
@@ -279,7 +279,7 @@ def tar(*files, writer:nil)
       tar(*Dir[File.join(file, '*')], writer: tw)
     else
       tw.add_file(path, mode) do |tf|
-        File.open(file, 'rb') { |f| tf.write f.read }
+        File.open(file, 'rb') {|f| tf.write f.read }
       end
     end
   end
