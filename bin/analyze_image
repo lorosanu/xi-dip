@@ -14,11 +14,11 @@ XiImage::Config.load_yaml('conf/xi_image.yml')
 img = XiImage::Image.new(File.open(ARGV[0]).read)
 puts "Size: #{img.size}"
 puts "Format: #{img.format}"
-puts "Colors:"
+puts 'Colors:'
 img.color_histogram
    .sort_by {|k, v| -v }
    .each {|k, v| puts "  - #{k.join('|')}: #{v}" }
 
 
-puts "Exif:"
+puts 'Exif:'
 img.exif.each {|k, v| puts "  - #{k}: #{v}" }

@@ -15,9 +15,9 @@ require 'json'
 # (since it's depending on the execution of git)
 Dir.chdir(File.dirname(__FILE__))
 
-MODULE = "xi-image".freeze
-MODULE_PATH = "xi_image".freeze
-GEM_REPOSITORY = "https://gem.xilopix.net:443".freeze
+MODULE = 'xi-image'.freeze
+MODULE_PATH = 'xi_image'.freeze
+GEM_REPOSITORY = 'https://gem.xilopix.net:443'.freeze
 GEMINABOX_REPOSITORY = true
 
 LIB_DIR = File.expand_path('lib', File.dirname(__FILE__))
@@ -27,7 +27,7 @@ CONF_DIR = File.expand_path('conf', File.dirname(__FILE__))
 DOC_DIR = File.expand_path('doc', File.dirname(__FILE__))
 
 desc "Create an archive of the project's files"
-task :archive => ["archive:clean"] do
+task :archive => ['archive:clean'] do
   name = "#{MODULE}-#{version}"
 
   archive_src(false)
@@ -40,26 +40,26 @@ task :archive => ["archive:clean"] do
 end
 
 namespace :archive do
-  desc "Create an archive of the sources"
+  desc 'Create an archive of the sources'
   task :src do
     archive_src(true)
   end
 
-  desc "Clean the archive"
+  desc 'Clean the archive'
   task :clean do
     FileUtils.rm_f("#{MODULE}-#{version}.tar.xz")
   end
 end
 
-desc "Build and publish all packages"
-task :pkg => ["pkg:clean", "pkg:build", "pkg:publish"]
+desc 'Build and publish all packages'
+task :pkg => ['pkg:clean', 'pkg:build', 'pkg:publish']
 namespace :pkg do
-  desc "Build package of a specified component (all if none specified)"
+  desc 'Build package of a specified component (all if none specified)'
   task :build do |t, args|
     gem_build(MODULE)
   end
 
-  desc "Publish package of a specified component (all if none specified)"
+  desc 'Publish package of a specified component (all if none specified)'
   task :publish => [:build] do |t, args|
     geminabox_delete(MODULE) if GEMINABOX_REPOSITORY \
       and geminabox_exist?(MODULE)
@@ -67,43 +67,43 @@ namespace :pkg do
   end
 
   if GEMINABOX_REPOSITORY
-    desc "Unpublish package of a specified component (all if none specified)"
+    desc 'Unpublish package of a specified component (all if none specified)'
     task :unpublish do |t, args|
       geminabox_delete(MODULE) if geminabox_exist?(MODULE)
     end
   end
 
-  desc "Clean package files"
+  desc 'Clean package files'
   task :clean do
     FileUtils.rm_rf(PKG_DIR)
   end
 end
 
-desc "Check the syntax of every files"
-task :syntax => ["syntax:src", "syntax:bin", "syntax:gems", "syntax:conf"]
+desc 'Check the syntax of every files'
+task :syntax => ['syntax:src', 'syntax:bin', 'syntax:gems', 'syntax:conf']
 namespace :syntax do
-  desc "Check the syntax of source files"
+  desc 'Check the syntax of source files'
   task :src do
     Dir[File.join(LIB_DIR, '**', '*.rb')].each do |f|
       sh "ruby -cw #{f}"
     end
   end
 
-  desc "Check the syntax of script files"
+  desc 'Check the syntax of script files'
   task :bin do
     Dir[File.join(BIN_DIR, '*')].each do |f|
       sh "ruby -cw #{f}"
     end
   end
 
-  desc "Check the syntax of gem files"
+  desc 'Check the syntax of gem files'
   task :gems do
     Dir[File.join('**', '*.gemspec')].each do |f|
       sh "ruby -cw #{f}"
     end
   end
 
-  desc "Check the syntax of config files"
+  desc 'Check the syntax of config files'
   task :conf do
     Dir[File.join(CONF_DIR, '**', '*.conf')].each do |f|
       sh "ruby -ryaml -e 'YAML.load(STDIN)' < #{f}"
@@ -112,24 +112,24 @@ namespace :syntax do
 end
 
 namespace :version do
-  desc "Bump version of the application"
-  task :bump => ["version:bump:minor"]
+  desc 'Bump version of the application'
+  task :bump => ['version:bump:minor']
   namespace :bump do
-    desc "Bump the patch version number"
+    desc 'Bump the patch version number'
     task :patch do
       version = version_read()
       version[2] += 1
       version_write(version)
     end
 
-    desc "Bump the minor version number"
+    desc 'Bump the minor version number'
     task :minor do
       version = version_read()
       version[1] += 1
       version_write(version)
     end
 
-    desc "Bump the major version number"
+    desc 'Bump the major version number'
     task :major do
       version = version_read()
       version[0] += 1
@@ -137,7 +137,7 @@ namespace :version do
     end
   end
 
-  desc "Set/Unset a tag on current version (development)"
+  desc 'Set/Unset a tag on current version (development)'
   task :tag, [:name] do |t, args|
     if args.name and !args.name.empty?
       version = version_read()
@@ -251,7 +251,7 @@ def version_read
     ret[3] = Regexp.last_match(4) if Regexp.last_match(4)
     ret
   else
-    abort "Invalid version file"
+    abort 'Invalid version file'
   end
 end
 
