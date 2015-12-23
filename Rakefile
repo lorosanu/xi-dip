@@ -276,7 +276,7 @@ def tar(*files,writer:nil)
 
     if File.directory?(file)
       tw.mkdir(path,mode)
-      tar(*Dir[File.join(file,'*')],writer:tw)
+      tar(*Dir[File.join(file,'*')],writer: tw)
     else
       tw.add_file(path,mode) do |tf|
         File.open(file,'rb') { |f| tf.write f.read }
