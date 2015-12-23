@@ -15,16 +15,16 @@ require 'json'
 # (since it's depending on the execution of git)
 Dir.chdir(File.dirname(__FILE__))
 
-MODULE="xi-image".freeze
-MODULE_PATH="xi_image".freeze
-GEM_REPOSITORY="https://gem.xilopix.net:443".freeze
-GEMINABOX_REPOSITORY=true
+MODULE = "xi-image".freeze
+MODULE_PATH = "xi_image".freeze
+GEM_REPOSITORY = "https://gem.xilopix.net:443".freeze
+GEMINABOX_REPOSITORY = true
 
-LIB_DIR=File.expand_path('lib', File.dirname(__FILE__))
-BIN_DIR=File.expand_path('bin', File.dirname(__FILE__))
-PKG_DIR=File.expand_path('pkg', File.dirname(__FILE__))
-CONF_DIR=File.expand_path('conf', File.dirname(__FILE__))
-DOC_DIR=File.expand_path('doc', File.dirname(__FILE__))
+LIB_DIR = File.expand_path('lib', File.dirname(__FILE__))
+BIN_DIR = File.expand_path('bin', File.dirname(__FILE__))
+PKG_DIR = File.expand_path('pkg', File.dirname(__FILE__))
+CONF_DIR = File.expand_path('conf', File.dirname(__FILE__))
+DOC_DIR = File.expand_path('doc', File.dirname(__FILE__))
 
 desc "Create an archive of the project's files"
 task :archive => ["archive:clean"] do
@@ -164,7 +164,7 @@ def gem_name(comp)
 end
 
 def gem_pkg_file(comp, dir=nil)
-  File.join(dir||PKG_DIR, "#{gem_name(comp)}-#{version}.gem")
+  File.join(dir || PKG_DIR, "#{gem_name(comp)}-#{version}.gem")
 end
 
 def gem_spec_file(comp)
