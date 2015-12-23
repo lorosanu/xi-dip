@@ -3,7 +3,7 @@ require 'rmagick'
 require 'exifr'
 
 DEFAULT_COLORS = {'#FFFFFF' => ['white'],
-                   '#000000' => ['black']}
+                   '#000000' => ['black']}.freeze
 
 class XiImage::ColorMap
   attr_reader :image, :colors
