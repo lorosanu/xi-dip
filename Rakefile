@@ -55,12 +55,12 @@ desc 'Build and publish all packages'
 task :pkg => ['pkg:clean', 'pkg:build', 'pkg:publish']
 namespace :pkg do
   desc 'Build package of a specified component (all if none specified)'
-  task :build do |t, args|
+  task :build do |_t, _args|
     gem_build(MODULE)
   end
 
   desc 'Publish package of a specified component (all if none specified)'
-  task :publish => [:build] do |t, args|
+  task :publish => [:build] do |_t, _args|
     geminabox_delete(MODULE) if GEMINABOX_REPOSITORY \
       and geminabox_exist?(MODULE)
     gem_push(MODULE)
@@ -68,7 +68,7 @@ namespace :pkg do
 
   if GEMINABOX_REPOSITORY
     desc 'Unpublish package of a specified component (all if none specified)'
-    task :unpublish do |t, args|
+    task :unpublish do |_t, _args|
       geminabox_delete(MODULE) if geminabox_exist?(MODULE)
     end
   end
@@ -138,7 +138,7 @@ namespace :version do
   end
 
   desc 'Set/Unset a tag on current version (development)'
-  task :tag, [:name] do |t, args|
+  task :tag, [:name] do |_t, args|
     if args.name and !args.name.empty?
       version = version_read()
       version[3] = args.name.strip
