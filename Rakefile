@@ -269,7 +269,7 @@ def tar(*files, writer:nil)
 
   files.each do |file|
     if file.is_a?(String)
-      path = file.gsub(/^#{File.expand_path(File.dirname(__FILE__))}\/?/, '')
+      path = file.gsub(%r{^#{File.expand_path(File.dirname(__FILE__))}\/?}, '')
     elsif file.is_a?(Hash)
       file, path = file.first
     end
