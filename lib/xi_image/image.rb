@@ -17,14 +17,17 @@ class XiImage::ColorMap
 end
 
 class XiImage::Image
+  class << self
+    attr_accessor :colormap
+  end
 
-  @@loaded = false
+  @loaded = false
   def self.load
-    return if @@loaded
-    @@colormap = XiImage::ColorMap.new(
+    return if @loaded
+    @colormap = XiImage::ColorMap.new(
       XiImage::Config.get('colormap', DEFAULT_COLORS)
     )
-    @@loaded = true
+    @loaded = true
   end
 
   def initialize(blob)
@@ -59,7 +62,7 @@ class XiImage::Image
   end
 
   def color_histogram(colormap: nil)
-    colormap = @@colormap if colormap.nil?
+    colormap = XiImage::Image.colormap if colormap.nil?
     img = @image
     img = img.transparent('white', 65_535)
     img = img.remap(colormap.image)
