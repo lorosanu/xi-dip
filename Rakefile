@@ -154,9 +154,11 @@ end
 
 def archive_src(compress=true)
   if compress
-    sh "git archive -v --format=tar --prefix='#{MODULE}-#{version}/' HEAD | xz -c > #{MODULE}-#{version}.tar.xz"
+    sh "git archive -v --format=tar --prefix='#{MODULE}-#{version}/' HEAD"\
+      " | xz -c > #{MODULE}-#{version}.tar.xz"
   else
-    sh "git archive -v --format=tar --prefix='#{MODULE}-#{version}/' --output #{MODULE}-#{version}.tar HEAD"
+    sh "git archive -v --format=tar --prefix='#{MODULE}-#{version}/'"\
+     " --output #{MODULE}-#{version}.tar HEAD"
   end
 end
 
@@ -230,10 +232,14 @@ def geminabox_delete(comp)
   http.use_ssl = true if uri.scheme == 'https'
   http.start
   resp = http.delete(geminabox_http_path(comp))
-  fail <<-EOS if !resp.is_a?(Net::HTTPSuccess) && !resp.is_a?(Net::HTTPRedirection) && !resp.is_a?(Net::HTTPBadGateway) # BadGateway -> geminabox "bug"
-    HTTP/DELETE failed on #{File.join(uri.to_s, geminabox_http_path(comp))}
-    ##{resp.code}: #{resp.message} #{resp.to_hash}
-  EOS
+  if !resp.is_a?(Net::HTTPSuccess) \
+    && !resp.is_a?(Net::HTTPRedirection) \
+    && !resp.is_a?(Net::HTTPBadGateway) # BadGateway -> geminabox "bug"
+    fail <<-EOS
+      HTTP/DELETE failed on #{File.join(uri.to_s, geminabox_http_path(comp))}
+      ##{resp.code}: #{resp.message} #{resp.to_hash}
+    EOS
+  end
   puts "Removed #{File.basename(geminabox_http_path(comp))}"
 end
 
@@ -260,7 +266,8 @@ def version_write(version)
   File.open(version_file, 'r') do |file|
     content = file.read
     file.reopen(version_file, 'w')
-    file.write(content.gsub(/\d+\.\d+\.\d+(?:\.([\w\.-]+))?/, version.join('.')))
+    content.gsub!(/\d+\.\d+\.\d+(?:\.([\w\.-]+))?/, version.join('.'))
+    file.write(content)
   end
 end
 
