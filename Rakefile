@@ -63,7 +63,7 @@ namespace :pkg do
   desc 'Publish package of a specified component (all if none specified)'
   task :publish => [:build] do |_t, _args|
     geminabox_delete(MODULE) if GEMINABOX_REPOSITORY \
-      and geminabox_exist?(MODULE)
+      && geminabox_exist?(MODULE)
     gem_push(MODULE)
   end
 
@@ -140,7 +140,7 @@ namespace :version do
 
   desc 'Set/Unset a tag on current version (development)'
   task :tag, [:name] do |_t, args|
-    if args.name and !args.name.empty?
+    if args.name && !args.name.empty?
       version = version_read()
       version[3] = args.name.strip
       version_write(version)
@@ -230,7 +230,7 @@ def geminabox_delete(comp)
   http.use_ssl = true if uri.scheme == 'https'
   http.start
   resp = http.delete(geminabox_http_path(comp))
-  fail <<-EOS if !resp.is_a?(Net::HTTPSuccess) and !resp.is_a?(Net::HTTPRedirection) and !resp.is_a?(Net::HTTPBadGateway) # BadGateway -> geminabox "bug"
+  fail <<-EOS if !resp.is_a?(Net::HTTPSuccess) && !resp.is_a?(Net::HTTPRedirection) && !resp.is_a?(Net::HTTPBadGateway) # BadGateway -> geminabox "bug"
     HTTP/DELETE failed on #{File.join(uri.to_s, geminabox_http_path(comp))}
     ##{resp.code}: #{resp.message} #{resp.to_hash}
   EOS
