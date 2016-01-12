@@ -1,8 +1,10 @@
+# encoding: utf-8
+
 require 'rmagick'
 require 'exifr'
 
-DEFAULT_COLORS =  {'#FFFFFF' => ['white'],
-                   '#000000' => ['black']}
+DEFAULT_COLORS = { '#FFFFFF' => ['white'],
+                   '#000000' => ['black'] }.freeze
 
 class XiImage::ColorMap
   attr_reader :image, :colors
@@ -10,19 +12,22 @@ class XiImage::ColorMap
   def initialize(colors)
     @colors = colors
     @image = Magick::Image.new(1, @colors.length)
-    @colors.each_with_index {|c, i| @image.pixel_color(0, i, c[0])}
+    @colors.each_with_index {|c, i| @image.pixel_color(0, i, c[0]) }
   end
 end
 
 class XiImage::Image
+  class << self
+    attr_accessor :colormap
+  end
 
-  @@loaded = false
+  @loaded = false
   def self.load
-    return if @@loaded
-    @@colormap = XiImage::ColorMap.new(
+    return if @loaded
+    @colormap = XiImage::ColorMap.new(
       XiImage::Config.get('colormap', DEFAULT_COLORS)
     )
-    @@loaded = true
+    @loaded = true
   end
 
   def initialize(blob)
@@ -45,7 +50,7 @@ class XiImage::Image
     exif = (exif.nil?) ? {} : exif.to_hash
     exif.each do |k, v|
       begin
-        v.encode!('utf-8', 'utf-8',  :invalid => :replace) if v.class == String
+        v.encode!('utf-8', 'utf-8', :invalid => :replace) if v.class == String
       rescue
         exif.delete(k)
       end
@@ -57,11 +62,16 @@ class XiImage::Image
   end
 
   def color_histogram(colormap: nil)
-    colormap = @@colormap if colormap.nil?
+    colormap = XiImage::Image.colormap if colormap.nil?
     img = @image
-    img = img.transparent('white', 65535)
+    img = img.transparent('white', 65_535)
     img = img.remap(colormap.image)
-    Hash[img.color_histogram.map {|k,v|
-      [colormap.colors[k.to_color(Magick::AllCompliance, true, 8, true)], v]}]
+    histo = {}
+    img.color_histogram.each do |color, number|
+      color = color.to_color(Magick::AllCompliance, true, 8, true)
+      color_name = colormap.colors[color]
+      histo[color_name] = number
+    end
+    histo
   end
 end
