@@ -16,8 +16,8 @@ require 'json'
 # (since it's depending on the execution of git)
 Dir.chdir(File.dirname(__FILE__))
 
-MODULE = 'xi-image'.freeze
-MODULE_PATH = 'xi_image'.freeze
+MODULE = 'xi-dip'.freeze
+MODULE_PATH = 'xi/dip'.freeze
 GEM_REPOSITORY = 'https://gem.xilopix.net:443'.freeze
 GEMINABOX_REPOSITORY = true
 

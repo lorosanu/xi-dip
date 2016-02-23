@@ -2,16 +2,16 @@
 # -*- encoding : utf-8 -*-
 
 $LOAD_PATH.unshift 'lib/'
-require 'xi/image'
+require 'xi/dip'
 
 if ARGV.length < 1
   puts 'Usage ./bin/analyze_image <image>'
   exit
 end
 
-Xi::Image::Config.load_yaml('conf/xi_image.yml')
+Xi::DIP::Config.load_yaml('conf/xi_dip.yml')
 
-img = Xi::Image::Image.new(File.open(ARGV[0]).read)
+img = Xi::DIP::Image.new(File.open(ARGV[0]).read)
 puts "Size: #{img.size}"
 puts "Format: #{img.format}"
 puts 'Colors:'

@@ -1,4 +1,4 @@
-The Xilopix Image Processing Library
+The Xilopix Digital Image Processing Library
 
 # Dependencies
 - imagemagick
