@@ -6,7 +6,7 @@ require 'exifr'
 DEFAULT_COLORS = { '#FFFFFF' => ['white'],
                    '#000000' => ['black'] }.freeze
 
-class Xi::Image::ColorMap
+class Xi::DIP::ColorMap
   attr_reader :image, :colors
 
   def initialize(colors)
@@ -16,7 +16,7 @@ class Xi::Image::ColorMap
   end
 end
 
-class Xi::Image::Image
+class Xi::DIP::Image
   class << self
     attr_accessor :colormap
   end
@@ -24,8 +24,8 @@ class Xi::Image::Image
   @loaded = false
   def self.load
     return if @loaded
-    @colormap = Xi::Image::ColorMap.new(
-      Xi::Image::Config.get('colormap', DEFAULT_COLORS)
+    @colormap = Xi::DIP::ColorMap.new(
+      Xi::DIP::Config.get('colormap', DEFAULT_COLORS)
     )
     @loaded = true
   end
@@ -33,7 +33,7 @@ class Xi::Image::Image
   def initialize(blob)
     @blob = blob
     @image = Magick::Image.from_blob(blob).first
-    Xi::Image::Image.load
+    Xi::DIP::Image.load
   end
 
   def format
@@ -62,7 +62,7 @@ class Xi::Image::Image
   end
 
   def color_histogram(colormap: nil)
-    colormap = Xi::Image::Image.colormap if colormap.nil?
+    colormap = Xi::DIP::Image.colormap if colormap.nil?
     img = @image
     img = img.transparent('white', 65_535)
     img = img.remap(colormap.image)

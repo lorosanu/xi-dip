@@ -7,8 +7,8 @@ Log4r::YamlConfigurator.load_yaml_file(File.expand_path('./log4r.yml',
   File.dirname(__FILE__)))
 
 module Xi
-  module Image
-    Logger = Log4r::Logger['xi_nlp']
+  module DIP
+    Logger = Log4r::Logger['xi_dip']
 
     module Config
       @config = {}
@@ -40,4 +40,4 @@ module Xi
   end
 end
 
-require 'xi/image/image'
+require 'xi/dip/image'

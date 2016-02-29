@@ -2,14 +2,14 @@
 
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'xi_image/version'
+require 'xi/dip/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'xi-image'
-  spec.version       = XiImage::VERSION
+  spec.name          = 'xi-dip'
+  spec.version       = Xi::DIP::VERSION
   spec.authors       = ['Paul Bédaride']
   spec.email         = ['paul.bedaride@xilopix.com']
-  spec.summary       = %q{Xilopix image processing library}
+  spec.summary       = %q{Xilopix Digital Image Processing library}
   spec.description   = %q{Analysing images}
 
   spec.files         = `git ls-files -z lib/ data/`.split("\x0")

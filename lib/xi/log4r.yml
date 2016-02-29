@@ -1,6 +1,6 @@
 log4r_config:
   loggers:
-  - name: "xi_image"
+  - name: "xi_dip"
     level: WARN
     outputters:
     - stdout
