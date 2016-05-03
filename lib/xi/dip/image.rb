@@ -65,7 +65,7 @@ class Xi::DIP::Image
     colormap = Xi::DIP::Image.colormap if colormap.nil?
     img = @image
     img = img.transparent('white', 65_535)
-    img = img.remap(colormap.image)
+    img = img.remap(colormap.image, Magick::NoDitherMethod)
     histo = {}
     img.color_histogram.each do |color, number|
       color = color.to_color(Magick::AllCompliance, true, 8, true)
