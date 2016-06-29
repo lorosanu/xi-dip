@@ -61,6 +61,10 @@ class Xi::DIP::Image
     [@image.columns, @image.rows]
   end
 
+  def alpha?
+    @image.alpha?
+  end
+
   def color_histogram(colormap: nil)
     colormap = Xi::DIP::Image.colormap if colormap.nil?
     img = @image
