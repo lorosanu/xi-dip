@@ -13,6 +13,10 @@ module Xi
     module Config
       @config = {}
 
+      def self.load(config)
+        @config.update(config)
+      end
+
       def self.load_yaml(path)
         @config.update(YAML.load_file(path))
       end
