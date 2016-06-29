@@ -11,9 +11,12 @@ end
 
 Xi::DIP::Config.load_yaml('conf/xi_dip.yml')
 
-img = Xi::DIP::Image.new(File.open(ARGV[0]).read)
+data = File.open(ARGV[0]).read
+
+img = Xi::DIP::Image.new(data)
 puts "Size: #{img.size}"
 puts "Format: #{img.format}"
+puts "Transparent: #{img.alpha?}"
 puts 'Colors:'
 img.color_histogram
    .sort_by {|_k, v| -v }
