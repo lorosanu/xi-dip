@@ -45,7 +45,7 @@ class Xi::DIP::Image
     if format == 'JPEG'
       exif = EXIFR::JPEG.new(StringIO.new @blob).exif
     elsif format == 'TIFF'
-      exif = EXIFR::TIFF.new(StringIO.new @blob).exif
+      exif = EXIFR::TIFF.new(StringIO.new @blob).to_hash
     end
     exif = (exif.nil?) ? {} : exif.to_hash
     exif.each do |k, v|
