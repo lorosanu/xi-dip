@@ -1,17 +1,46 @@
 #!/usr/bin/ruby
 # -*- encoding : utf-8 -*-
 
+require 'optparse'
+
 $LOAD_PATH.unshift 'lib/'
 require 'xi/dip'
 
-if ARGV.length < 1
-  puts 'Usage ./bin/analyze_image <image>'
-  exit
+
+#======================================================================
+# Parse the command line arguments
+#======================================================================
+
+@options = {}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Object: extract main colors\n"
+  opts.banner << 'Usage:  ./bin/analyze_image [options]'
+
+  opts.on('-i INPUT', '--input INPUT', 'Input file') {|v| @options[:input] = v }
+  opts.on_tail('-h', '--help', 'Show this message') do
+    puts opts
+    exit
+  end
 end
+
+begin
+  parser.parse!
+  abort "[Error] Empty argument(s)\n\n#{parser}" if @options[:input].nil?
+rescue OptionParser::InvalidOption => e1
+  abort "[Error] #{e1.message.capitalize}\n\n#{parser}"
+rescue OptionParser::MissingArgument => e2
+  abort "[Error] #{e2.message.capitalize}\n\n#{parser}"
+end
+
+
+#======================================================================
+# Preprocess, transform and extract colors from image
+#======================================================================
 
 Xi::DIP::Config.load_yaml('conf/xi_dip.yml')
 
-data = File.open(ARGV[0]).read
+data = File.open(@options[:input]).read
 
 img = Xi::DIP::Image.new(data)
 puts "Size: #{img.size}"
@@ -21,7 +50,6 @@ puts 'Colors:'
 img.color_histogram
    .sort_by {|_k, v| -v }
    .each {|k, v| puts "  - #{k.join('|')}: #{v}" }
-
 
 puts 'Exif:'
 img.exif.each {|k, v| puts "  - #{k}: #{v}" }
