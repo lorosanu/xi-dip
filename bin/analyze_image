@@ -6,6 +6,12 @@ require 'optparse'
 $LOAD_PATH.unshift 'lib/'
 require 'xi/dip'
 
+#======================================================================
+# Setup loggers level
+#======================================================================
+
+Xi::DIP::Logger.global_level = Log4r::INFO
+
 
 #======================================================================
 # Parse the command line arguments
@@ -33,6 +39,8 @@ rescue OptionParser::MissingArgument => e2
   abort "[Error] #{e2.message.capitalize}\n\n#{parser}"
 end
 
+Xi::DIP::Utils.check_file_readable!(@options[:input])
+
 
 #======================================================================
 # Preprocess, transform and extract colors from image
@@ -41,15 +49,24 @@ end
 Xi::DIP::Config.load_yaml('conf/xi_dip.yml')
 
 data = File.open(@options[:input]).read
-
 img = Xi::DIP::Image.new(data)
-puts "Size: #{img.size}"
-puts "Format: #{img.format}"
-puts "Transparent: #{img.alpha?}"
-puts 'Colors:'
-img.color_histogram
-   .sort_by {|_k, v| -v }
-   .each {|k, v| puts "  - #{k.join('|')}: #{v}" }
 
-puts 'Exif:'
-img.exif.each {|k, v| puts "  - #{k}: #{v}" }
+start_time = Time.now()
+
+Xi::DIP.logger.info("Size: #{img.size}")
+Xi::DIP.logger.info("Format: #{img.format}")
+Xi::DIP.logger.info("Transparent: #{img.alpha?}")
+
+Xi::DIP.logger.info('Colors:')
+img.color_histogram
+  .sort_by {|_k, v| -v }
+  .each do |k, v|
+    percentage = '%.2f' % v
+    Xi::DIP.logger.info(" - #{k.join('|').ljust(27)} #{percentage.rjust(5)}%")
+  end
+
+elapsed_time = '%.3f' % (Time.now() - start_time)
+Xi::DIP.logger.info("Execution: #{elapsed_time}s")
+
+Xi::DIP.logger.info('Exif:')
+img.exif.each {|k, v| Xi::DIP.logger.info("  - #{k}: #{v}") }
