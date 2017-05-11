@@ -29,3 +29,4 @@ end
 
 require 'xi/dip/image'
 require 'xi/dip/color'
+require 'xi/dip/preprocess'
