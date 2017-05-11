@@ -11,3 +11,5 @@ require 'xi/dip/color/convertor'
 
 require 'xi/dip/color/distance'
 require 'xi/dip/color/comparator'
+
+require 'xi/dip/color/color_map'
