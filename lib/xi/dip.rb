@@ -28,3 +28,4 @@ module Xi::DIP
 end
 
 require 'xi/dip/image'
+require 'xi/dip/color'
