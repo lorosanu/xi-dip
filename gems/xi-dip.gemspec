@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.extra_rdoc_files = `git ls-files -z conf/`.split("\x0") + %w{README}
   spec.require_paths    = ['lib']
   spec.bindir           = 'bin'
-  spec.executables      = %w[analyze_image]
+  spec.executables      = %w[analyze_image extract_color]
 
   spec.add_runtime_dependency 'log4r', '~> 1.1', '>= 1.1.10'
   spec.add_runtime_dependency 'rmagick', '~> 2', '>= 2.15.0'

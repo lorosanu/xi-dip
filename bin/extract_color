@@ -1,0 +1,110 @@
+#!/usr/bin/ruby
+# -*- encoding : utf-8 -*-
+
+require 'optparse'
+
+$LOAD_PATH.unshift 'lib/'
+require 'xi/dip'
+
+
+#======================================================================
+# Setup loggers level
+#======================================================================
+
+Xi::DIP::Logger.global_level = Log4r::INFO
+
+
+#======================================================================
+# Parse the command line arguments
+#======================================================================
+
+@options = {}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Object: extract main colors\n"
+  opts.banner << 'Usage: ./bin/extract_color [options]'
+
+  opts.on('-i INPUT', '--input INPUT', 'Input file') {|v| @options[:input] = v }
+  opts.on('-c CONF', '--conf CONF', 'Config file') {|v| @options[:conf] = v }
+  opts.on_tail('-h', '--help', 'Show this message') do
+    puts opts
+    exit
+  end
+end
+
+begin
+  parser.parse!
+  abort "[Error] Empty argument(s)\n\n#{parser}" \
+    if @options[:conf].nil? || @options[:input].nil?
+rescue OptionParser::InvalidOption => e1
+  abort "[Error] #{e1.message.capitalize}\n\n#{parser}"
+rescue OptionParser::MissingArgument => e2
+  abort "[Error] #{e2.message.capitalize}\n\n#{parser}"
+end
+
+Xi::DIP::Utils.check_file_readable!(@options[:input])
+Xi::DIP::Utils.check_file_readable!(@options[:conf])
+
+
+#======================================================================
+# Load configuration
+#======================================================================
+
+begin
+  @conf = YAML.load(File.read(@options[:conf]))
+  abort "[Error] Empty list in YAML file '#{@options[:conf]}'" if @conf.empty?
+  abort "[Error] YAML object stored in '#{@options[:conf]}' is not a HASH" \
+    unless @conf.is_a?(Hash)
+rescue => e
+  abort "[Error] Bad format of YAML file '#{@options[:conf]}' : #{e.message}"
+end
+
+[:preprocessing, :nclusters, :colorspace, :distance].each do |arg|
+  abort "Missing argument: #{arg}" unless @conf.key?(arg)
+end
+
+image_file = @options[:input]
+options = @conf[:preprocessing]
+nclusters = @conf[:nclusters]
+colorspace = @conf[:colorspace]
+distance = @conf[:distance]
+
+Xi::DIP.logger.info("Processing current configuration:\n#{PP.pp(@conf, '')}")
+
+#======================================================================
+# Extract colors
+#======================================================================
+
+Xi::DIP.logger.info('Extract colors')
+
+extractor = Xi::DIP::ColorExtractor::Extractor.new()
+
+# preprocess image
+start_time = Time.now()
+extractor.preprocess_image(image_file, options)
+elapsed_time = '%.3f' % (Time.now() - start_time)
+Xi::DIP.logger.info("Preprocessing execution: #{elapsed_time}s")
+
+# extract colors
+hcolors = extractor.color_histogram(nclusters, colorspace, distance)
+Xi::DIP.logger.info('Colors: ')
+hcolors.each do |colorname, colorcount|
+  percentage = '%.2f' % colorcount
+  Xi::DIP.logger.info("  - #{colorname.ljust(27)} #{percentage.rjust(5)}%")
+end
+
+elapsed_time = '%.3f' % (Time.now() - start_time)
+Xi::DIP.logger.info("Color extraction execution: #{elapsed_time}s")
+
+# save recolored image
+unless options.key?(:extract_bkg)
+  name = Xi::DIP::Utils.basename(image_file)
+  recolored_image = File.join(
+    Xi::DIP::Utils.dirname(image_file),
+    "#{name}_recolored_extraction_#{nclusters}_#{colorspace}_#{distance}.png",
+  )
+
+  Xi::DIP::Utils.create_path(recolored_image)
+  extractor.draw_recolored_image(recolored_image)
+  Xi::DIP.logger.info("Recolored imaged saved under #{recolored_image}")
+end
