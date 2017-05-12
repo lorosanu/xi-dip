@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths    = ['lib']
   spec.bindir           = 'bin'
   spec.executables      = %w[analyze_image extract_color create_dataset
-                             detect_color]
+                             detect_color folder_analyze_detect]
 
   spec.add_runtime_dependency 'log4r', '~> 1.1', '>= 1.1.10'
   spec.add_runtime_dependency 'rmagick', '~> 2', '>= 2.15.0'
