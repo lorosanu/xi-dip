@@ -11,6 +11,7 @@ require 'rmagick'           # lib for image processing
 require 'exifr'             # module to read metadata from JPEG and TIFF images
 require 'exifr/jpeg'
 require 'exifr/tiff'
+require 'xi/ml'             # lib for classification
 
 module Xi
   module DIP

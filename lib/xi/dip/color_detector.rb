@@ -6,3 +6,4 @@ end
 
 require 'xi/dip/color_detector/features'
 require 'xi/dip/color_detector/dataset'
+require 'xi/dip/color_detector/detector'

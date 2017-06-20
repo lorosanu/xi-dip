@@ -22,6 +22,7 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'log4r', '~> 1.1', '>= 1.1.10'
   spec.add_runtime_dependency 'rmagick', '~> 2', '>= 2.15.0'
   spec.add_runtime_dependency 'exifr', '~> 1', '>= 1.2.0'
+  spec.add_runtime_dependency 'xi-ml', '~> 0.5', '>= 0.5.0'
 
   spec.add_development_dependency 'yard', '~> 0.9'
   spec.add_development_dependency 'xi-rake', '~> 0.1', '>= 0.1.0'
