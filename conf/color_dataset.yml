@@ -1,0 +1,24 @@
+:res: /mnt/data/ml/colors/
+:input: images/reference
+:output: features/reference/12colors/
+:colors:
+  - white
+  - black
+  - gray
+  - red
+  - green
+  - blue
+  - cyan
+  - brown
+  - yellow
+  - orange
+  - pink
+  - purple
+:options:
+  :resize:
+    - 64
+    - 64
+  :level: :pixel
+  :type: :value
+  :arguments:
+    :colorspace: :rgb

@@ -1,0 +1,118 @@
+#!/usr/bin/ruby
+# -*- encoding : utf-8 -*-
+
+require 'optparse'
+# require 'xi/ml'
+
+$LOAD_PATH.unshift 'lib/'
+require 'xi/dip'
+
+$LOAD_PATH.unshift '/src_ml/lib/'
+require 'xi/ml'
+
+#======================================================================
+# Setup loggers level
+#======================================================================
+
+Xi::DIP::Logger.global_level = Log4r::INFO
+
+
+#======================================================================
+# Parse the command line arguments
+#======================================================================
+
+@options = {}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Object: detect main colors\n"
+  opts.banner << 'Usage: ./bin/detect_color [options]'
+
+  opts.on('-i INPUT', '--input INPUT', 'Input file') {|v| @options[:input] = v }
+  opts.on('-c CONF', '--conf CONF', 'Config file') {|v| @options[:conf] = v }
+  opts.on_tail('-h', '--help', 'Show this message') do
+    puts opts
+    exit
+  end
+end
+
+begin
+  parser.parse!
+  abort "[Error] Empty argument(s)\n\n#{parser}" \
+    if @options[:conf].nil? || @options[:input].nil?
+rescue OptionParser::InvalidOption => e1
+  abort "[Error] #{e1.message.capitalize}\n\n#{parser}"
+rescue OptionParser::MissingArgument => e2
+  abort "[Error] #{e2.message.capitalize}\n\n#{parser}"
+end
+
+Xi::DIP::Utils.check_file_readable!(@options[:input])
+Xi::DIP::Utils.check_file_readable!(@options[:conf])
+
+
+#======================================================================
+# Load configuration
+#======================================================================
+
+begin
+  @conf = YAML.load(File.read(@options[:conf]))
+  abort "[Error] Empty list in YAML file '#{@options[:conf]}'" if @conf.empty?
+  abort "[Error] YAML object stored in '#{@options[:conf]}' is not a HASH" \
+    unless @conf.is_a?(Hash)
+rescue => e
+  abort "[Error] Bad format of YAML file '#{@options[:conf]}' : #{e.message}"
+end
+
+[:model, :level, :type, :arguments, :preprocessing].each do |arg|
+  abort "Missing argument: #{arg}" unless @conf.key?(arg)
+end
+
+image_file = @options[:input]
+model_file = @conf[:model]
+level = @conf[:level]
+ftype = @conf[:type]
+fargs = @conf[:arguments]
+options = @conf[:preprocessing]
+
+Xi::DIP.logger.info("Processing current configuration:\n#{PP.pp(@conf, '')}")
+
+
+#======================================================================
+# Detect colors
+#======================================================================
+
+Xi::DIP.logger.info('Detecting colors with an MLP classifier')
+
+# load classifier
+detector = Xi::DIP::ColorDetector::Detector.new(model_file)
+
+# preprocess image
+start_time = Time.now()
+detector.preprocess_image(image_file, options, true)
+elapsed_time = '%.3f' % (Time.now() - start_time)
+Xi::DIP.logger.info("Preprocessing execution: #{elapsed_time}s")
+
+# generate features & detect colors
+hcolors = detector.color_histogram(level, ftype, fargs)
+
+Xi::DIP.logger.info('Colors:')
+hcolors.each do |colorname, colorcount|
+  percentage = '%.2f' % colorcount
+  Xi::DIP.logger.info("  - #{colorname.ljust(27)} #{percentage.rjust(5)}%")
+end
+
+elapsed_time = '%.3f' % (Time.now() - start_time)
+Xi::DIP.logger.info("Color detection execution: #{elapsed_time}s")
+
+# save recolored image
+unless options.key?(:extract_bkg)
+  name = Xi::DIP::Utils.basename(image_file)
+  fargs = fargs.values.join('_')
+  recolored_image = File.join(
+    Xi::DIP::Utils.dirname(image_file),
+    "#{name}_recolored_detection_#{level}_#{ftype}_#{fargs}.png",
+  )
+
+  Xi::DIP::Utils.create_path(recolored_image)
+  detector.draw_recolored_image(recolored_image)
+  Xi::DIP.logger.info("Recolored imaged saved under #{recolored_image}")
+end

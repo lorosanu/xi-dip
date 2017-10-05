@@ -1,47 +1,35 @@
 # encoding: utf-8
 
-require 'log4r'
-require 'log4r/yamlconfigurator'
 
-Log4r::YamlConfigurator.load_yaml_file(File.expand_path('./log4r.yml',
-  File.dirname(__FILE__)))
+require 'pp'
+require 'time'
+require 'json'
+require 'yaml'
+require 'fileutils'         # create path
+require 'log4r'
+require 'rmagick'           # lib for image processing
+require 'exifr'             # module to read metadata from JPEG and TIFF images
+require 'exifr/jpeg'
+require 'exifr/tiff'
+require 'xi/ml'             # lib for classification
 
 module Xi
   module DIP
-    Logger = Log4r::Logger['xi_dip']
+  end
+end
 
-    module Config
-      @config = {}
+require 'xi/dip/error'
+require 'xi/dip/tools'
 
-      def self.load(config)
-        @config.update(config)
-      end
-
-      def self.load_yaml(path)
-        @config.update(YAML.load_file(path))
-      end
-
-      def self.get(namespace, default = nil)
-        config = @config
-        namespace.split('/').each do |ns|
-          return default unless config.is_a?(Hash) && config.key?(ns)
-          config = config[ns]
-        end
-        config
-      end
-
-      def self.set(namespace, value)
-        config = @config
-        namespace = namespace.split('/')
-        last = namespace.pop
-        namespace.each do |ns|
-          config[ns] = {} unless config.key? ns
-          config = config[ns]
-        end
-        config[last] = value
-      end
-    end
+module Xi::DIP
+  @logger = Xi::DIP::Logger.create_root()
+  def self.logger
+    @logger
   end
 end
 
 require 'xi/dip/image'
+require 'xi/dip/color'
+require 'xi/dip/preprocess'
+require 'xi/dip/color_extractor'
+require 'xi/dip/color_detector'

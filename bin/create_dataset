@@ -1,0 +1,274 @@
+#!/usr/bin/ruby
+# encoding: utf-8
+
+
+require 'optparse'
+
+$LOAD_PATH.unshift 'lib/'
+require 'xi/dip'
+
+
+#======================================================================
+# Parse the command line arguments
+#======================================================================
+
+@options = {}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Object: create the dataset for color detection\n"
+  opts.banner << 'Usage: ./bin/create_dataset [options]'
+
+  opts.on('-c CONF', '--config CONF', 'Config file') {|v| @options[:conf] = v }
+  opts.on('--update', 'Manually update dataset') {|v| @options[:update] = v }
+  opts.on('--colorize', 'Colorize dataset') {|v| @options[:colorize] = v }
+  opts.on_tail('-h', '--help', 'Show this message') do
+    puts opts
+    exit
+  end
+end
+
+begin
+  parser.parse!
+  abort "[Error] Empty argument(s)\n\n#{parser}" if @options[:conf].nil?
+rescue OptionParser::InvalidOption => e1
+  abort "[Error] #{e1.message.capitalize}\n\n#{parser}"
+rescue OptionParser::MissingArgument => e2
+  abort "[Error] #{e2.message.capitalize}\n\n#{parser}"
+end
+
+Xi::DIP::Utils.check_file_readable!(@options[:conf])
+
+
+#======================================================================
+# Load configuration
+#======================================================================
+
+begin
+  @conf = YAML.load(File.read(@options[:conf]))
+  abort "[Error] Empty list in YAML file '#{@options[:conf]}'" if @conf.empty?
+  abort "[Error] YAML object stored in '#{@options[:conf]}' is not a HASH" \
+    unless @conf.is_a?(Hash)
+rescue => e
+  abort "[Error] Bad format of YAML file '#{@options[:conf]}' : #{e.message}"
+end
+
+Xi::DIP.logger.info("Processing current configuration:\n#{PP.pp(@conf, '')}")
+
+# setup options
+if @conf.key?(:options)
+  resize = @conf[:options][:resize]
+  level = @conf[:options][:level]
+  type = @conf[:options][:type]
+  args = @conf[:options][:arguments]
+else
+  resize = [64, 64]
+  level = :pixel
+  type = :value
+  args = { colorspace: :rgb }
+end
+
+fargs = args.values.join('_')
+ncolors = @conf[:colors].size
+cfg = "#{ncolors}colors_#{level}_#{type}_#{fargs}_#{resize.join('x')}"
+
+Xi::DIP.logger.info("Processing current configuration: resize=#{resize}, "\
+  "level=#{level}, dbtype=#{type}, args=#{fargs}")
+
+input_folder = File.join(@conf[:res], @conf[:input])
+output_folder = File.join(
+  @conf[:res],
+  @conf[:output],
+  "#{level}_#{type}_#{fargs}_#{resize.join('x')}")
+
+Xi::DIP::Utils.create_folder(output_folder)
+Xi::DIP.logger.info("Features sets stored under #{output_folder}")
+
+#======================================================================
+# Create dataset
+#======================================================================
+
+complete_file = File.join(
+  @conf[:res],
+  @conf[:output],
+  "#{cfg}.json",
+)
+
+File.open(complete_file, 'w') do |of|
+  @conf[:colors].each do |color|
+    Xi::DIP.logger.info("Creating the #{color} features set")
+
+    cfolder = File.join(input_folder, color)
+    files_list = Dir.entries(cfolder).map{|f| File.join(cfolder, f) }
+    files_list = files_list.select{|f| File.file?(f) }
+    files_list = files_list.sort_by{|s| s.scan(/\d+/).map(&:to_i) }
+
+    next if files_list.empty?
+
+    db_file = File.join(output_folder, "#{color}.json")
+
+    db = Xi::DIP::ColorDetector::Dataset.new(color.to_s, files_list, resize)
+    db.create_dataset(db_file, level, type, args)
+
+    File.open(db_file, 'r').each_line do |line|
+      of.puts(line)
+    end
+  end
+end
+Xi::DIP.logger.info('Finished creating the color dataset')
+
+#======================================================================
+# Update dataset
+#======================================================================
+
+if File.readable?(complete_file) && @options.key?(:update)
+  if type == :value && args[:colorspace] == :rgb
+    Xi::DIP.logger.info("'Manually' updating the color dataset")
+
+    dbname = File.basename(@conf[:input])
+    updated_file = complete_file.sub(dbname, 'updated')
+
+    Xi::DIP::Utils.create_path(updated_file)
+
+    ncolors = {}
+    ncolors.default = 0
+
+    glevel = 0.05
+    wlevel = 0.7
+    blevel = 0.3
+
+    File.open(updated_file, 'w') do |of|
+      File.open(complete_file, 'r').each_line do |line|
+        entry = JSON.load(line)
+
+        # update color category if necessary
+        # gray pixels: have similar R, G, B values
+        # white pixels: have high gray values
+        # black pixels: have low gray values
+        # red pixels: have mainly red value
+        # green pixels: have mainly green value
+        # blue pixels: have mainly blue value
+
+        unless ['white', 'black'].include?(entry['category'])
+          feat = entry['features']
+          min_samples = 0.75 * (feat.size / 3)
+
+          nsamples = {}
+          nsamples.default = 0
+
+          # region = flatt array of rgb values
+          feat.each_slice(3) do |rgb|
+            mean = rgb.inject(:+) * 1.0 / rgb.size
+
+            check_gray = false
+            check_gray = true if rgb.count{|x| (x - mean).abs <= glevel } == 3
+
+            check_white = false
+            check_white = true if check_gray && rgb.count{|x| x >= wlevel } == 3
+
+            check_black = false
+            check_black = true if check_gray && rgb.count{|x| x <= blevel } == 3
+
+            r, g, b = rgb
+            check_red = false
+            check_red = true if r >= 0.5 && g <= 0.05 && b <= 0.05
+
+            check_green = false
+            check_green = true if g >= 0.5 && r <= 0.05 && b <= 0.05
+
+            check_blue = false
+            check_blue = true if b >= 0.5 && r <= 0.05 && g <= 0.05
+
+            nsamples[:white] += 1 if check_white
+            nsamples[:black] += 1 if check_black
+            nsamples[:gray] += 1 if check_gray
+            nsamples[:red] += 1 if check_red
+            nsamples[:green] += 1 if check_green
+            nsamples[:blue] += 1 if check_blue
+          end
+
+          if nsamples[:white] >= min_samples
+            entry['category'] = 'white'
+          elsif nsamples[:black] >= min_samples
+            entry['category'] = 'black'
+          elsif nsamples[:gray] >= min_samples
+            entry['category'] = 'gray'
+          elsif nsamples[:red] >= min_samples
+            entry['category'] = 'red'
+          elsif nsamples[:green] >= min_samples
+            entry['category'] = 'green'
+          elsif nsamples[:blue] >= min_samples
+            entry['category'] = 'blue'
+          end
+        end
+
+        unless entry.empty?
+          of.puts(entry.to_json)
+          ncolors[entry['category']] += 1
+        end
+      end
+    end
+
+    Xi::DIP.logger.info("Updated the color dataset:\n#{ncolors}")
+  else
+    Xi::DIP.logger.info('Can only update RGB value datasets')
+  end
+end
+
+
+#======================================================================
+# Colorize dataset
+#======================================================================
+
+if @options.key?(:colorize)
+  dbname = File.basename(@conf[:input])
+  updated_file = complete_file.sub(dbname, 'updated')
+
+  data_file = complete_file
+  data_file = updated_file if @options.key?(:update)
+  return unless File.readable?(data_file)
+
+  Xi::DIP.logger.info(
+    "Drawing the color dataset under #{File.dirname(data_file)}")
+
+  @conf[:colors].each do |color|
+    img_file = File.join(
+      File.dirname(data_file),
+      "#{cfg}_#{color}.png",
+    )
+
+    Xi::DIP.logger.info("Gathering pixels for #{color} color")
+
+    pixels = []
+    File.open(data_file, 'r').each_line do |line|
+      entry = JSON.load(line)
+      pixels << entry['features'] if entry['category'] == color
+    end
+
+    pixels.sort!
+    Xi::DIP.logger.info("Gathered #{pixels.size} pixels")
+
+    unless pixels.empty?
+      Xi::DIP.logger.info('Drawing')
+
+      h = (pixels.size / 1000).to_i
+      w = 1000
+
+      i, j = 0, 0
+      img = Magick::Image.new(w, h)
+      pixels.each do |pixel|
+        npixel = pixel.map{|x| (x * 65_535).to_i }
+        npixel = Magick::Pixel.new(*npixel)
+
+        img.pixel_color(j, i, npixel) if j < w && i < h
+
+        j += 1
+        if j % w == 0
+          j = 0
+          i += 1
+        end
+      end
+
+      img.write(img_file)
+    end
+  end
+end

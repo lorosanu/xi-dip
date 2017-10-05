@@ -1,0 +1,537 @@
+#!/usr/bin/ruby
+# -*- encoding : utf-8 -*-
+
+require 'erb'
+require 'optparse'
+
+$LOAD_PATH.unshift 'lib/'
+require 'xi/dip'
+
+
+#======================================================================
+# Setup loggers level
+#======================================================================
+
+Xi::DIP::Logger.global_level = Log4r::INFO
+Xi::ML::Tools::Logger.global_level = Log4r::WARN
+
+
+#======================================================================
+# Parse the command line arguments
+#======================================================================
+
+@options = {}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Object: detect main colors\n"
+  opts.banner << 'Usage: ./bin/folder_analyze_detect [options]'
+
+  opts.on('-i IN', '--input IN', 'Input folder') {|v| @options[:input] = v }
+  opts.on('-c CONF', '--conf CONF', 'Config file') {|v| @options[:conf] = v }
+  opts.on_tail('-h', '--help', 'Show this message') do
+    puts opts
+    exit
+  end
+end
+
+begin
+  parser.parse!
+  abort "[Error] Empty argument(s)\n\n#{parser}" \
+    if @options[:input].nil? || @options[:conf].nil?
+rescue OptionParser::InvalidOption => e1
+  abort "[Error] #{e1.message.capitalize}\n\n#{parser}"
+rescue OptionParser::MissingArgument => e2
+  abort "[Error] #{e2.message.capitalize}\n\n#{parser}"
+end
+
+Xi::DIP::Utils.check_folder_readable!(@options[:input])
+Xi::DIP::Utils.check_file_readable!(@options[:conf])
+
+
+#======================================================================
+# Load configuration
+#======================================================================
+
+begin
+  @conf = YAML.load(File.read(@options[:conf]))
+  abort "[Error] Empty list in YAML file '#{@options[:conf]}'" if @conf.empty?
+  abort "[Error] YAML object stored in '#{@options[:conf]}' is not a HASH" \
+    unless @conf.is_a?(Hash)
+rescue => e
+  abort "[Error] Bad format of YAML file '#{@options[:conf]}' : #{e.message}"
+end
+
+[:features, :model].each do |arg|
+  abort "Missing argument: #{arg}" unless @conf.key?(arg)
+end
+
+[:level, :type].each do |arg|
+  abort "Missing argument: features[#{arg}]" unless @conf[:features].key?(arg)
+end
+
+[:res, :dataset, :colors, :algo, :activation, :type, :structure, :dataresize]\
+  .each do |arg|
+  abort "Missing argument: model[#{arg}]" unless @conf[:model].key?(arg)
+end
+
+level = @conf[:features][:level]
+type = @conf[:features][:type]
+
+if level == :pixel && type == :value
+  @feature_types = [
+    { :colorspace => :rgb },
+    { :colorspace => :hsl },
+    { :colorspace => :hsv },
+    { :colorspace => :lab },
+    { :colorspace => :yiq },
+    { :colorspace => :xyz },
+    { :colorspace => :rgbc },
+  ]
+elsif level == :pixel && type == :distance
+  @feature_types = [
+    { :measure => :euclidean, :nclusters => 12, :colorspace => :rgb },
+    { :measure => :euclidean, :nclusters => 12, :colorspace => :hsl },
+    { :measure => :euclidean, :nclusters => 12, :colorspace => :hsv },
+    { :measure => :euclidean, :nclusters => 12, :colorspace => :lab },
+    { :measure => :euclidean, :nclusters => 12, :colorspace => :yiq },
+    { :measure => :euclidean, :nclusters => 12, :colorspace => :xyz },
+    { :measure => :delta_e, :nclusters => 12, :colorspace => :lab },
+  ]
+elsif level == :region && type == :value
+  @feature_types = [
+    { :size => 4, :sliding => true, :colorspace => :rgb },
+    { :size => 4, :sliding => true, :colorspace => :hsl },
+    { :size => 4, :sliding => true, :colorspace => :hsv },
+    { :size => 4, :sliding => true, :colorspace => :lab },
+    { :size => 4, :sliding => true, :colorspace => :yiq },
+    { :size => 4, :sliding => true, :colorspace => :xyz },
+    { :size => 4, :sliding => false, :colorspace => :rgb },
+    { :size => 4, :sliding => false, :colorspace => :hsl },
+    { :size => 4, :sliding => false, :colorspace => :hsv },
+    { :size => 4, :sliding => false, :colorspace => :lab },
+    { :size => 4, :sliding => false, :colorspace => :yiq },
+    { :size => 4, :sliding => false, :colorspace => :xyz },
+  ]
+end
+
+raise Xi::DIP::Error::ConfigError, \
+  "Unknown level=#{level} type=#{type} configuration" \
+  if @feature_types.nil?
+
+preproc = {}
+to_resize = false
+to_remove_bkg = false
+
+if @conf[:preprocessing]
+  preproc = @conf[:preprocessing]
+
+  if @conf[:preprocessing][:resize]
+    to_resize = true
+    resize = @conf[:preprocessing][:resize]
+  end
+
+  to_remove_bkg = true if @conf[:preprocessing][:extract_bkg]
+end
+
+draw = @conf[:draw] ? true : false
+@ncolors = @conf[:model][:colors]
+
+#======================================================================
+# File setups
+#======================================================================
+
+@images = Dir.entries(@options[:input]).map{|f| File.join(@options[:input], f) }
+@images = @images.select{|f| File.file?(f) }
+@images = @images.sort_by{|s| s.scan(/\d+/).map(&:to_i) }
+
+raise Xi::DIP::Error::ConfigError, 'Given folder of images is empty' \
+  if @images.empty?
+
+
+#======================================================================
+# analyze image
+#======================================================================
+
+# setups
+@file_extraction = File.join(
+  @options[:input],
+  'results',
+  'extraction',
+  "resize=#{to_resize}.json",
+)
+
+@folder_extraction = File.join(
+  @options[:input],
+  'recolored',
+  'extraction',
+  "resize=#{to_resize}",
+)
+
+Xi::DIP::Utils.create_path(@file_extraction)
+Xi::DIP::Utils.create_folder(@folder_extraction)
+
+@results_extraction = {}
+@results_extraction = JSON.load(File.read(@file_extraction)) \
+  if File.readable?(@file_extraction)
+
+
+# analyze
+Xi::DIP.logger.info('Analyze image')
+
+@images.each do |image_file|
+  fn = Xi::DIP::Utils.basename(image_file)
+
+  unless @results_extraction.key?(fn)
+    Xi::DIP.logger.info("- processing image: #{image_file}")
+
+    img = Xi::DIP::Image.new(image_file)
+
+    start_time = Time.now()
+    img.force_resize!(*resize) if to_resize
+    hcolors = img.maincolor_histogram()
+    elapsed_time = '%.3f' % (Time.now() - start_time)
+
+    @results_extraction[fn] = {
+      colors: hcolors.dup,
+      exec: elapsed_time,
+    }
+
+    recolored_image = File.join(@folder_extraction, "#{fn}.png")
+    img.draw_recolored_image(recolored_image, 31, true)
+  end
+end
+
+unless @results_extraction.empty?
+  Xi::DIP.logger.info("Storing results into '#{@file_extraction}' file")
+  Xi::DIP::Utils.create_path(@file_extraction)
+  File.open(@file_extraction, 'w') do |of|
+    of.puts(JSON.pretty_generate(@results_extraction))
+  end
+end
+
+
+#======================================================================
+# Remove background (for debugging)
+#======================================================================
+
+bkgpreproc = [
+  {
+    name: 'Xi::DIP::Preprocess::FloodFillMask',
+    args: { remap: false, gray_threshold: 0.1 },
+  },
+  {
+    name: 'Xi::DIP::Preprocess::SimCornersMask',
+    args: { remap: false, max_distance: 0.1 },
+  },
+]
+
+@folder_foreground = File.join(
+  @options[:input],
+  'recolored',
+  'nobackground',
+  "resize=#{to_resize}",
+)
+
+stats_file = File.join(
+  @options[:input],
+  'results',
+  'nobackground',
+  "resize=#{to_resize}.json",
+)
+
+Xi::DIP::Utils.create_folder(@folder_foreground)
+Xi::DIP::Utils.create_path(stats_file)
+
+Xi::DIP.logger.info("Background removal using 2 masks, resize=#{to_resize}")
+
+stats = {}
+@images.each do |image_file|
+  fn = Xi::DIP::Utils.basename(image_file)
+  recolored_file = File.join(@folder_foreground, "#{fn}.png")
+
+  unless File.readable?(recolored_file)
+    Xi::DIP.logger.info("Processing image: #{image_file}")
+
+    start_time = Time.now()
+    img = Xi::DIP::Image.new(image_file)
+    img.force_resize!(*resize) if to_resize
+    back_mask, cover = Xi::DIP::Preprocess::BackgroundMask.extract(
+      img.image, bkgpreproc)
+    elapsed_time = (Time.now() - start_time).round(2)
+
+    img.recolor_boolean_mask!(back_mask, 'pink')
+    img.save(recolored_file)
+
+    stats[fn] = {
+      coverage: cover,
+      execution: elapsed_time,
+    }
+  end
+end
+
+unless stats.empty?
+  File.open(stats_file, 'w'){|of| of.puts(JSON.pretty_generate(stats)) }
+end
+
+
+#======================================================================
+# Detection setups
+#======================================================================
+
+img_opt = "#{level}_#{type}"
+img_opt << "_resize=#{resize.join('x')}" if to_resize
+img_opt << '_removebkg' if to_remove_bkg
+
+models_folder = File.join(
+  @conf[:model][:res],
+  @conf[:model][:dataset],
+  "#{@ncolors}colors",
+  @conf[:model][:algo],
+  @conf[:model][:activation],
+)
+
+dataset = "#{@ncolors}colors_#{@conf[:model][:dataset]}"
+malgo = "#{@conf[:model][:algo]}_#{@conf[:model][:activation]}"
+mtype = "#{@conf[:model][:type]}_#{@conf[:model][:structure]}"
+
+dpath = File.join(
+  'detection',
+  "resize=#{to_resize}",
+  dataset,
+  "#{malgo}_#{mtype}",
+)
+
+@folder_detection = File.join(@options[:input], 'recolored', dpath)
+@file_detection = File.join(
+  @options[:input], 'results', dpath, "#{img_opt}.json")
+
+@texfolder = File.join(@options[:input], 'tex', dpath)
+@texfile = File.join(@texfolder, "#{img_opt}.tex")
+
+Xi::DIP::Utils.create_path(@file_detection)
+Xi::DIP::Utils.create_folder(@folder_detection)
+Xi::DIP::Utils.create_folder(@texfolder)
+
+@results_detection = {}
+@results_detection = JSON.load(File.read(@file_detection)) \
+  if File.readable?(@file_detection)
+
+
+#======================================================================
+# Detect colors
+#======================================================================
+
+ftype = "#{level}_#{type}"
+rtype = @conf[:model][:dataresize]
+
+Xi::DIP.logger.info('Current configuration for color detection: '\
+  "feat=#{img_opt} model=#{dataset}-#{malgo}-#{mtype}")
+
+@images.each do |image_file|
+  Xi::DIP.logger.info("Processing image: #{image_file}")
+  fn = Xi::DIP::Utils.basename(image_file)
+
+  @feature_types.each do |arguments|
+    upp_args = arguments.dup
+    upp_args[:colorspace] = upp_args[:colorspace].to_s.upcase
+    fargs = upp_args.values.join('_')
+
+    m_args = upp_args.dup
+    m_args[:sliding] = true if m_args.key?(:sliding)
+    margs = m_args.values.join('_')
+
+    model_file = File.join(
+      models_folder,
+      upp_args[:colorspace],
+      "mlpclassifier_#{mtype}_#{ftype}_#{margs}_#{rtype}.json",
+    )
+
+    unless File.readable?(model_file)
+      Xi::DIP.logger.warn("Model file '#{model_file}' is missing")
+      next
+    end
+
+    @results_detection[fn] = {} unless @results_detection.key?(fn)
+
+    unless @results_detection[fn].key?(fargs)
+      Xi::DIP.logger.info("* config feat=#{ftype}-#{fargs}")
+
+      detector = Xi::DIP::ColorDetector::Detector.new(model_file)
+
+      # preprocess image, generate features, detect colors
+      start_time = Time.now()
+      detector.preprocess_image(image_file, preproc)
+      hcolors = detector.color_histogram(level, type, arguments)
+      elapsed_time = '%.3f' % (Time.now() - start_time)
+
+      @results_detection[fn][fargs] = {
+        colors: hcolors.dup,
+        exec: elapsed_time,
+      }
+
+      # save recolored image
+      if draw && !to_remove_bkg
+        recolored_image = File.join(
+          @folder_detection,
+          "#{ftype}_#{fargs}",
+          "#{fn}.png",
+        )
+        Xi::DIP::Utils.create_path(recolored_image)
+        detector.draw_recolored_image(recolored_image)
+      end
+    end
+  end
+end
+
+unless @results_detection.empty?
+  Xi::DIP.logger.info("Storing results into '#{@file_detection}' file")
+  Xi::DIP::Utils.create_path(@file_detection)
+  File.open(@file_detection, 'w') do |of|
+    of.puts(JSON.pretty_generate(@results_detection))
+  end
+end
+
+
+#======================================================================
+# Create LATEX file
+#======================================================================
+
+Xi::DIP.logger.info('Generating results .tex file')
+
+# check file and folder existance
+Xi::DIP::Utils.check_file_readable!(@file_extraction)
+Xi::DIP::Utils.check_file_readable!(@file_detection)
+Xi::DIP::Utils.check_folder_readable!(@folder_foreground)
+Xi::DIP::Utils.check_folder_readable!(@folder_extraction)
+Xi::DIP::Utils.check_folder_readable!(@folder_detection)
+
+# create variables for latex template
+@results_extraction = JSON.load(File.read(@file_extraction))
+@results_detection = JSON.load(File.read(@file_detection))
+
+@images_foreground = {}
+@images_extraction = {}
+@images_detection = {}
+
+@images = @images.map do |image_path|
+  [Xi::DIP::Utils.basename(image_path), image_path]
+end.to_h
+
+@images.each_key do |fn|
+  @images_foreground[fn] = File.join(@folder_foreground, "#{fn}.png")
+  @images_extraction[fn] = File.join(@folder_extraction, "#{fn}.png")
+
+  @images_detection[fn] = {}
+  @feature_types.each do|arguments|
+    upp_args = arguments.dup
+    upp_args[:colorspace] = upp_args[:colorspace].to_s.upcase
+    fargs = upp_args.values.join('_')
+
+    if @results_detection[fn].key?(fargs)
+      @images_detection[fn][fargs] = File.join(
+        @folder_detection,
+        "#{ftype}_#{fargs}",
+        "#{fn}.png",
+      )
+    end
+  end
+end
+
+# generate tex file
+template = ERB.new(DATA.read, nil, '->')
+
+File.open(@texfile, 'w') do |of|
+  of.write(template.result(binding()))
+end
+
+# generate pdflatex command
+cname = File.basename(@options[:input])
+resize_opt = to_resize ? resize.join('x') : false
+
+Xi::DIP.logger.info("Storing LATEX file into '#{@texfile}' file")
+Xi::DIP.logger.info('Exec: pdflatex --jobname='\
+  "#{cname}_#{ftype}_resize=#{resize_opt}_model=#{malgo}_#{mtype} "\
+  "-output-directory=#{@texfolder} #{@texfile}")
+
+__END__
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage[a3paper,landscape]{geometry}
+\geometry{verbose,tmargin=0.5cm,bmargin=2cm,lmargin=0.5cm,rmargin=0.5cm}
+\usepackage{graphicx}
+\usepackage{graphbox}
+\usepackage{multirow}
+\usepackage{xcolor}
+
+\begin{document}
+
+<% @images.each do |fn, image_path| %>
+  \begin{centering}
+
+  <% if File.readable?(image_path) && File.readable?(@images_foreground[fn]) %>
+    \includegraphics[height=3cm]{<%= image_path %>}
+    \hspace{0.1cm}
+    \includegraphics[height=3cm]{<%= @images_foreground[fn] %>}
+  <% end %>
+
+  \par\end{centering}
+
+  \vspace{0.3cm}
+  \begin{centering}
+  \begin{tabular}{|c|c|c|<% (@ncolors+1).times do %>p{2cm}|<% end %>}
+  \hline
+
+  \textbf{Extraction} & - &
+
+  <% if File.readable?(@images_extraction[fn]) %>
+    \includegraphics[align=c,height=2.8cm]{<%= @images_extraction[fn] %>}
+  <% else %>
+    -
+  <% end %>
+
+  & \textbf{Execution:} \newline \newline <%= @results_extraction[fn]['exec'] %>s
+
+  <% @results_extraction[fn]['colors'].each do |color_name, color_ratio| %>
+    <% if color_ratio > 5 %>
+      & \textbf{<%= color_name[0..6].upcase %>} \newline \newline <%= color_ratio %>\%
+    <% else %>
+      & \textcolor{lightgray}{ <%= color_name[0..6].upcase %> \newline \newline <%= color_ratio %>\% }
+    <% end %>
+  <% end %>
+  \tabularnewline
+  \hline
+
+  \multirow{<%= @results_detection[fn].size %>}{*}{\textbf{Detection}}
+  <% @results_detection[fn].each do |fargs, results| %>
+    & \textbf{<%= fargs.gsub(/_/, '\\_') %>} &
+
+    <% if File.readable?(@images_detection[fn][fargs]) %>
+      \includegraphics[align=c,height=2.8cm]{<%= @images_detection[fn][fargs] %>}
+    <% else %>
+      -
+    <% end %>
+
+    & \textbf{Execution:} \newline \newline <%= results['exec'] %>s
+
+    <% results['colors'].each do |color_name, color_ratio| %>
+      <% if color_ratio > 5 %>
+        & \textbf{<%= color_name[0..6].upcase %>} \newline \newline <%= color_ratio %>\%
+      <% else %>
+        & \textcolor{lightgray}{ <%= color_name[0..6].upcase %> \newline \newline <%= color_ratio %>\% }
+      <% end %>
+    <% end %>
+
+    \tabularnewline
+    \cline{2-<%= (4 + @ncolors) %>}
+  <% end %>
+
+  \hline
+  \end{tabular}
+
+  \par\end{centering}
+
+  \newpage
+<% end %>
+
+\end{document}

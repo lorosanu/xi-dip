@@ -1,0 +1,18 @@
+:features:
+  :level: :region
+  :type: :value
+:model:
+  :res: /usr/share/xi-dip/models/
+  :dataset: updated
+  :colors: 12
+  :algo: sgd
+  :activation: relu
+  :type: multilabel
+  :structure: 1HL-100n
+  :dataresize: 64x64
+:preprocessing:
+  :remove_alpha: true
+  :resize:
+    - 250
+    - 250
+:draw: true

@@ -1,27 +1,81 @@
 #!/usr/bin/ruby
 # -*- encoding : utf-8 -*-
 
+require 'optparse'
+
 $LOAD_PATH.unshift 'lib/'
 require 'xi/dip'
 
-if ARGV.length < 1
-  puts 'Usage ./bin/analyze_image <image>'
-  exit
+#======================================================================
+# Setup loggers level
+#======================================================================
+
+Xi::DIP::Logger.global_level = Log4r::INFO
+
+
+#======================================================================
+# Parse the command line arguments
+#======================================================================
+
+@options = {}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Object: extract main colors\n"
+  opts.banner << 'Usage: ./bin/analyze_image [options]'
+
+  opts.on('-i INPUT', '--input INPUT', 'Input file') {|v| @options[:input] = v }
+  opts.on('-n NCOLORS', 'The colormap\'s size') {|v| @options[:ncolors] = v }
+  opts.on_tail('-h', '--help', 'Show this message') do
+    puts opts
+    exit
+  end
 end
 
-Xi::DIP::Config.load_yaml('conf/xi_dip.yml')
+begin
+  parser.parse!
+  abort "[Error] Empty argument(s)\n\n#{parser}" if @options[:input].nil?
+rescue OptionParser::InvalidOption => e1
+  abort "[Error] #{e1.message.capitalize}\n\n#{parser}"
+rescue OptionParser::MissingArgument => e2
+  abort "[Error] #{e2.message.capitalize}\n\n#{parser}"
+end
 
-data = File.open(ARGV[0]).read
+Xi::DIP::Utils.check_file_readable!(@options[:input])
 
-img = Xi::DIP::Image.new(data)
-puts "Size: #{img.size}"
-puts "Format: #{img.format}"
-puts "Transparent: #{img.alpha?}"
-puts 'Colors:'
-img.color_histogram
-   .sort_by {|_k, v| -v }
-   .each {|k, v| puts "  - #{k.join('|')}: #{v}" }
+@ncolors = 31
+@ncolors = @options[:ncolors].to_i if @options[:ncolors]
+
+#======================================================================
+# Preprocess, transform and extract colors from image
+#======================================================================
 
 
-puts 'Exif:'
-img.exif.each {|k, v| puts "  - #{k}: #{v}" }
+start_time = Time.now()
+
+img = Xi::DIP::Image.new(@options[:input])
+img.resize!(100, 100)
+Xi::DIP.logger.info("Size: #{img.shape}")
+Xi::DIP.logger.info("Format: #{img.format}")
+Xi::DIP.logger.info("Transparent: #{img.alpha?}")
+
+Xi::DIP.logger.info('Colors:')
+img.color_histogram(@ncolors).each do |colorname, percentage|
+  Xi::DIP.logger.info(" - #{colorname.ljust(27)} #{percentage.to_s.rjust(5)}%")
+end
+
+elapsed_time = '%.3f' % (Time.now() - start_time)
+Xi::DIP.logger.info("Execution: #{elapsed_time}s")
+
+Xi::DIP.logger.info('Exif:')
+img.exif.each {|k, v| Xi::DIP.logger.info("  - #{k}: #{v}") }
+
+# redraw image
+name = Xi::DIP::Utils.basename(@options[:input])
+
+recolored_image = File.join(
+  Xi::DIP::Utils.dirname(@options[:input]),
+  "#{name}_remap_histogram_#{@ncolors}colors.png",
+)
+
+img.draw_recolored_image(recolored_image, @ncolors)
+Xi::DIP.logger.info("Recolored imaged saved under #{recolored_image}")

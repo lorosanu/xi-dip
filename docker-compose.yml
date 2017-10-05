@@ -1,0 +1,18 @@
+dip:
+  image: dip-devel
+  volumes:
+  - /mnt/data/ml/colors/:/mnt/data/ml/colors/
+
+dip-devel:
+  extends:
+    service: dip
+  volumes:
+  - .:/src
+  working_dir: /src/
+
+lab-dip-devel:
+  extends:
+    service: dip-devel
+  volumes:
+  - /mnt/data0/ml/colors/:/mnt/data0/ml/colors/
+

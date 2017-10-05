@@ -1,0 +1,10 @@
+:model: /usr/share/xi-dip/models/updated/12colors/sgd/relu/RGB/mlpclassifier_multilabel_2HL-36n-36n_pixel_value_RGB_64x64.json
+:level: :pixel
+:type: :value
+:arguments:
+  :colorspace: :rgb
+:preprocessing:
+  :remove_alpha: true
+  :resize:
+    - 100
+    - 100

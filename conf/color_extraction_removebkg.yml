@@ -1,0 +1,17 @@
+:preprocessing:
+  :remove_alpha: true
+  :resize:
+    - 100
+    - 100
+  :extract_bkg:
+    - :name: Xi::DIP::Preprocess::FloodFillMask
+      :args:
+        :remap: false
+        :gray_threshold: 0.1
+    - :name: Xi::DIP::Preprocess::SimCornersMask
+      :args:
+        :remap: false
+        :max_distance: 0.1
+:nclusters: 31
+:colorspace: :rgb
+:distance: :euclidean
