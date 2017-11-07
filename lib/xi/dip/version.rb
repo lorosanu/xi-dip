@@ -2,6 +2,6 @@
 
 module Xi
   module DIP
-    VERSION = '1.4.0'.freeze
+    VERSION = '1.5.0.dev'.freeze
   end
 end
