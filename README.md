@@ -116,7 +116,7 @@ INFO [24-08-2017 16:00:28] [xi::dip]:  - pink|lightPink                0.0%
 INFO [24-08-2017 16:00:28] [xi::dip]:  - pink|darkPink                 0.0%
 INFO [24-08-2017 16:00:28] [xi::dip]: Execution: 0.040s
 INFO [24-08-2017 16:00:28] [xi::dip]: Exif:
-INFO [24-08-2017 16:00:28] [xi::dip]: Recolored imaged saved under data/car_remap_histogram_31colors.png
+INFO [24-08-2017 16:00:28] [xi::dip]: Recolored image saved under data/car_remap_histogram_31colors.png
 ```
 
 ### Extract main colors from an image using RGB colorspace & euclidean distance
@@ -186,7 +186,7 @@ INFO [24-08-2017 16:01:19] [xi::dip]:   - pink                         0.00%
 INFO [24-08-2017 16:01:19] [xi::dip]:   - pink|lightPink               0.00%
 INFO [24-08-2017 16:01:19] [xi::dip]:   - pink|darkPink                0.00%
 INFO [24-08-2017 16:01:19] [xi::dip]: Color extraction execution: 0.151s
-INFO [24-08-2017 16:01:19] [xi::dip]: Recolored imaged saved under data/car_recolored_extraction_31_rgb_euclidean.png
+INFO [24-08-2017 16:01:19] [xi::dip]: Recolored image saved under data/car_recolored_extraction_31_rgb_euclidean.png
 ```
 
 ### Detect main colors in an image based on a pixel-value trained MLP classifier
@@ -241,7 +241,7 @@ INFO [24-08-2017 16:03:55] [xi::dip]:   - red                          0.10%
 INFO [24-08-2017 16:03:55] [xi::dip]:   - pink                         0.00%
 INFO [24-08-2017 16:03:55] [xi::dip]:   - purple                       0.00%
 INFO [24-08-2017 16:03:55] [xi::dip]: Color detection execution: 0.301s
-INFO [24-08-2017 16:03:55] [xi::dip]: Recolored imaged saved under data/car_recolored_detection_pixel_value_rgb.png
+INFO [24-08-2017 16:03:55] [xi::dip]: Recolored image saved under data/car_recolored_detection_pixel_value_rgb.png
 ```
 
 ### Detect main colors in an image based on a pixel-value trained MLP classifier

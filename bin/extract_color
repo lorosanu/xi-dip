@@ -106,5 +106,5 @@ unless options.key?(:extract_bkg)
 
   Xi::DIP::Utils.create_path(recolored_image)
   extractor.draw_recolored_image(recolored_image)
-  Xi::DIP.logger.info("Recolored imaged saved under #{recolored_image}")
+  Xi::DIP.logger.info("Recolored image saved under #{recolored_image}")
 end

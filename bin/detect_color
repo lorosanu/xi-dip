@@ -2,13 +2,9 @@
 # -*- encoding : utf-8 -*-
 
 require 'optparse'
-# require 'xi/ml'
 
 $LOAD_PATH.unshift 'lib/'
 require 'xi/dip'
-
-$LOAD_PATH.unshift '/src_ml/lib/'
-require 'xi/ml'
 
 #======================================================================
 # Setup loggers level
@@ -114,5 +110,5 @@ unless options.key?(:extract_bkg)
 
   Xi::DIP::Utils.create_path(recolored_image)
   detector.draw_recolored_image(recolored_image)
-  Xi::DIP.logger.info("Recolored imaged saved under #{recolored_image}")
+  Xi::DIP.logger.info("Recolored image saved under #{recolored_image}")
 end
