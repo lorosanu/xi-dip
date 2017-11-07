@@ -78,4 +78,4 @@ recolored_image = File.join(
 )
 
 img.draw_recolored_image(recolored_image, @ncolors)
-Xi::DIP.logger.info("Recolored imaged saved under #{recolored_image}")
+Xi::DIP.logger.info("Recolored image saved under #{recolored_image}")
