@@ -2,6 +2,11 @@
 
 # News
 
+## XiDIP 1.4.0 - 07/11/2017
+* use the 0.6.0 gem version of xi-ml
+* use a new models archive inside the docker image
+* update test models to match the new MLP format
+
 ## XiDIP 1.3.0 - 05/10/2017
 * update project configuration
     - add docker files
