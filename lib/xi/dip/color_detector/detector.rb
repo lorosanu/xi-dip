@@ -6,9 +6,27 @@ class Xi::DIP::ColorDetector::Detector
   # Load the MLP classifier
   # @param model_file [String] the classifier's model
   def initialize(model_file)
-    Xi::DIP::Utils.check_file_readable!(model_file)
-    @classifier = Xi::ML::Classify::Classifier.new('MLPClassifier', model_file)
-    @clusters = @classifier.model.model['classes']
+    cname = get_model_type(model_file)
+    @classifier = Xi::ML::Classify::Classifier.new(cname, model_file)
+    @clusters = @classifier.model.classes
+  end
+
+  def get_model_type(input)
+    Xi::DIP::Utils.check_file_readable!(input)
+
+    data = {}
+    begin
+      data = JSON.load(File.read(input))
+      raise Xi::DIP::Error::ConfigError, \
+        "Object stored in '#{input}' is not a HASH" unless data.is_a?(Hash)
+      raise Xi::DIP::Error::ConfigError, \
+        'Bad model file: No name specified' unless data.key?('name')
+    rescue => e
+      raise Xi::DIP::Error::CaughtException, \
+        "Bad format of JSON file #{input}: #{e.message}"
+    end
+
+    data['name'].to_sym
   end
 
   # Load and preprocess image

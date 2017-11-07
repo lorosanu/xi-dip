@@ -8,11 +8,11 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /usr/share/xi-dip/models/ && chown -R xilopix:xilopix /usr/share/xi-dip/models/
-RUN wget -qO- http://oueb.xilopix.net/ml/colors/models/models_updated.tar.xz | tar -xJ -C /usr/share/xi-dip/models/
+RUN wget -qO- http://oueb.xilopix.net/ml/caid_models/colors/models_updated.tar.xz | tar -xJ -C /usr/share/xi-dip/models/
 
 USER xilopix
 
 RUN gem sources -a https://gem.xilopix.net/
-RUN gem install --user-install --development --no-document xi-ml xi-dip
+RUN gem install --user-install --development --no-document xi-dip
 
 CMD rake test
